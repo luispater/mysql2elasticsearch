@@ -74,7 +74,7 @@ func (this *SyncMySQLToElasticSearch) Syncer() {
 				data := infData.(ESQueueItem)
 
 				if data.Action == "insert" || data.Action == "update" {
-					bulkRequest.Add(elastic.NewBulkIndexRequest().Index(data.IndexName).Id(data.PrimaryKey).Doc(data.Data))
+					bulkRequest.Add(elastic.NewBulkIndexRequest().Index(data.IndexName).Id(data.PrimaryKey).Doc(this.GetObjectValues(data.Data)))
 				} else if data.Action == "delete" {
 					bulkRequest.Add(elastic.NewBulkDeleteRequest().Index(data.IndexName).Id(data.PrimaryKey))
 				}
@@ -594,4 +594,15 @@ func (this *SyncMySQLToElasticSearch) OnPosSynced(pos mysql.Position, _ mysql.GT
 		this.onPosSynced(pos.Name, pos.Pos, force)
 	}
 	return nil
+}
+
+func (this *SyncMySQLToElasticSearch) GetObjectValues(object interface{}) map[string]interface{} {
+	result := make(map[string]interface{})
+	t := reflect.TypeOf(object)
+	v := reflect.ValueOf(object)
+	for i := 0; i < t.NumField(); i++ {
+		field := t.Field(i)
+		result[field.Name] = v.Field(i).Interface()
+	}
+	return result
 }
