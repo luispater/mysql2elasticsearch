@@ -50,6 +50,11 @@ type SyncMySQLToElasticSearch struct {
 	esQueue                *Queue
 	runSyncer              bool
 	option                 SyncMySQLToElasticSearchOption
+	onPosSynced            func(name string, pos uint32, force bool)
+}
+
+func (this *SyncMySQLToElasticSearch) SetOnPosSynced(onPostSynced func(name string, pos uint32, force bool)) {
+	this.onPosSynced = onPostSynced
 }
 
 func (this *SyncMySQLToElasticSearch) Syncer() {
@@ -548,7 +553,9 @@ func (this *SyncMySQLToElasticSearch) OnRow(rowsEvent *canal.RowsEvent) error {
 	return nil
 }
 
-func (this *SyncMySQLToElasticSearch) OnPosSynced(pos mysql.Position, set mysql.GTIDSet, force bool) error {
-	// fmt.Println(pos, set, force)
+func (this *SyncMySQLToElasticSearch) OnPosSynced(pos mysql.Position, _ mysql.GTIDSet, force bool) error {
+	if this.onPosSynced != nil {
+		this.onPosSynced(pos.Name, pos.Pos, force)
+	}
 	return nil
 }
