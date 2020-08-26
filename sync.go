@@ -535,8 +535,8 @@ func (this *SyncMySQLToElasticSearch) OnRow(rowsEvent *canal.RowsEvent) error {
 					sInstance.Field(column.Index).Set(val)
 				}
 			case nil:
-				val := reflect.ValueOf(&time.Time{})
-				sInstance.Field(column.Index).Set(val)
+				// val := reflect.ValueOf(nil)
+				// sInstance.Field(column.Index).Set(val)
 			default:
 				typeof := reflect.TypeOf(row[column.TableIndex])
 				log.Error(fmt.Sprint(row[column.TableIndex], typeof.String()))
