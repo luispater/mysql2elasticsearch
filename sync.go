@@ -91,7 +91,9 @@ func (this *SyncMySQLToElasticSearch) Syncer() {
 			if len(resp.Failed()) > 0 {
 				failed := resp.Failed()
 				for failedIndex := range failed {
-					log.Error(failed[failedIndex].Error.Reason)
+					if failed[failedIndex].Error != nil {
+						log.Error(failed[failedIndex].Error.Reason)
+					}
 				}
 			}
 			log.Infof("%d documents synced", len(resp.Succeeded()))
