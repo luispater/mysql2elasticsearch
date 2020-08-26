@@ -360,6 +360,7 @@ func (this *SyncMySQLToElasticSearch) SyncFrom(binlogFile string, binlogPosition
 	canalCfg.Addr = this.addr
 	canalCfg.User = this.user
 	canalCfg.Password = this.password
+	canalCfg.Dump.ExecutionPath = ""
 
 	includeTableRegex := make([]string, 0)
 	for key := range this.tableFields {
