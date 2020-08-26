@@ -233,9 +233,9 @@ func (this *SyncMySQLToElasticSearch) RegisterTable(tableName string, tableStruc
 		}
 	}
 
-	if _, hasKey := this.structPrimaryKey[tableName]; !hasKey {
-		return fmt.Errorf("%s %s not defind primary key", this.dbName, tableName)
-	}
+	// if _, hasKey := this.structPrimaryKey[tableName]; !hasKey {
+	// 	return fmt.Errorf("%s %s not defind primary key", this.dbName, tableName)
+	// }
 
 	this.tableNameStructMapping[tableName] = tableStruct
 
@@ -549,7 +549,20 @@ func (this *SyncMySQLToElasticSearch) OnRow(rowsEvent *canal.RowsEvent) error {
 
 	itf := sInstance.Interface()
 	rv := reflect.ValueOf(itf)
-	primaryKey := fmt.Sprint(rv.Field(this.structPrimaryKey[rowsEvent.Table.Name].Index).Interface())
+
+	primaryKey := ""
+	if _, hasPrimaryKey := this.structPrimaryKey[rowsEvent.Table.Name]; hasPrimaryKey {
+		primaryKey = fmt.Sprint(rv.Field(this.structPrimaryKey[rowsEvent.Table.Name].Index).Interface())
+	} else {
+		primaryKeys := make([]string, 0)
+		for i := 0; i < rv.NumField(); i++ {
+			if rv.Field(i).Type().Kind() == reflect.Uint {
+				primaryKeys = append(primaryKeys, fmt.Sprint(rv.Field(i).Interface()))
+			}
+		}
+		primaryKey = strings.Join(primaryKeys, ",")
+	}
+
 	this.addToESQueue(rowsEvent.Action, indexName, primaryKey, itf)
 	return nil
 }
