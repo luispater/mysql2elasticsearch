@@ -15,13 +15,13 @@ import (
 	"time"
 )
 
-func NewSyncMySQLToElasticSearch(addr, user, password, dbName, esAddr string, option ...SyncMySQLToElasticSearchOption) (*SyncMySQLToElasticSearch, error) {
+func NewSyncMySQLToElasticSearch(addr, user, password, dbName, esAddr, esUser, esPassword string, option ...SyncMySQLToElasticSearchOption) (*SyncMySQLToElasticSearch, error) {
 	var err error
 	sync := new(SyncMySQLToElasticSearch)
 	if len(option) > 0 {
-		err = sync.Init(addr, user, password, dbName, esAddr, option[0])
+		err = sync.Init(addr, user, password, dbName, esAddr, esUser, esPassword, option[0])
 	} else {
-		err = sync.Init(addr, user, password, dbName, esAddr, SyncMySQLToElasticSearchOption{})
+		err = sync.Init(addr, user, password, dbName, esAddr, esUser, esPassword, SyncMySQLToElasticSearchOption{})
 	}
 
 	if err != nil {
@@ -102,7 +102,7 @@ func (this *SyncMySQLToElasticSearch) Syncer() {
 	}
 }
 
-func (this *SyncMySQLToElasticSearch) Init(addr, user, password, dbName, esAddr string, option SyncMySQLToElasticSearchOption) error {
+func (this *SyncMySQLToElasticSearch) Init(addr, user, password, dbName, esAddr, esUser, esPassword string, option SyncMySQLToElasticSearchOption) error {
 	var err error
 
 	this.tableFields = make(map[string][]string)
@@ -141,6 +141,7 @@ func (this *SyncMySQLToElasticSearch) Init(addr, user, password, dbName, esAddr 
 		elastic.SetURL(servers...),
 		elastic.SetSniff(false),
 		elastic.SetHealthcheck(false),
+		elastic.SetBasicAuth(esUser, esPassword),
 	)
 	if err != nil {
 		return err
