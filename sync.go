@@ -269,7 +269,7 @@ func (this *SyncMySQLToElasticSearch) RegisterTable(tableName string, tableStruc
 }
 
 func (this *SyncMySQLToElasticSearch) getIndexName(tableName string) string {
-	return fmt.Sprintf("%s@%s", this.dbName, tableName)
+	return fmt.Sprintf("%s%s%s", this.dbName, this.option.IndexNameSeparator, tableName)
 }
 
 func (this *SyncMySQLToElasticSearch) getESIndexMapping(tableStruct interface{}) (string, error) {
