@@ -10,6 +10,7 @@ import (
 	mycli "github.com/siddontang/go-mysql/client"
 	"github.com/siddontang/go-mysql/mysql"
 	"reflect"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -482,6 +483,13 @@ func (this *SyncMySQLToElasticSearch) OnRow(rowsEvent *canal.RowsEvent) error {
 			case int64:
 				val := reflect.ValueOf(row[column.TableIndex])
 				sInstance.Field(column.Index).SetInt(val.Int())
+			case string:
+				val := reflect.ValueOf(row[column.TableIndex])
+				intVal, err := strconv.ParseInt(val.String(), 10, 64)
+				if err != nil {
+					log.Error(err)
+				}
+				sInstance.Field(column.Index).SetInt(intVal)
 			default:
 				typeof := reflect.TypeOf(row[column.TableIndex])
 				log.Error(fmt.Sprint(row[column.TableIndex], typeof.String()))
