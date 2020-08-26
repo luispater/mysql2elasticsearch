@@ -486,6 +486,18 @@ func (this *SyncMySQLToElasticSearch) OnRow(rowsEvent *canal.RowsEvent) error {
 				typeof := reflect.TypeOf(row[column.TableIndex])
 				log.Error(fmt.Sprint(row[column.TableIndex], typeof.String()))
 			}
+		case "float64", "float":
+			switch row[column.TableIndex].(type) {
+			case float32:
+				val := reflect.ValueOf(row[column.TableIndex])
+				sInstance.Field(column.Index).SetFloat(val.Float())
+			case float64:
+				val := reflect.ValueOf(row[column.TableIndex])
+				sInstance.Field(column.Index).SetFloat(val.Float())
+			default:
+				typeof := reflect.TypeOf(row[column.TableIndex])
+				log.Error(fmt.Sprint(row[column.TableIndex], typeof.String()))
+			}
 		case "bool":
 			switch row[column.TableIndex].(type) {
 			case uint8:
