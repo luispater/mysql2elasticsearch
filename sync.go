@@ -9,11 +9,21 @@ import (
 	"github.com/siddontang/go-mysql/canal"
 	mycli "github.com/siddontang/go-mysql/client"
 	"github.com/siddontang/go-mysql/mysql"
+	"io"
 	"reflect"
 	"strconv"
 	"strings"
 	"time"
 )
+
+func SetLogger(w io.Writer) {
+	sh, err := log.NewStreamHandler(w)
+	if err != nil {
+		panic(err)
+	}
+	l := log.NewDefault(sh)
+	log.SetDefaultLogger(l)
+}
 
 func NewSyncMySQLToElasticSearch(addr, user, password, dbName, esAddr, esUser, esPassword string, option ...SyncMySQLToElasticSearchOption) (*SyncMySQLToElasticSearch, error) {
 	var err error
@@ -33,6 +43,7 @@ func NewSyncMySQLToElasticSearch(addr, user, password, dbName, esAddr, esUser, e
 type SyncMySQLToElasticSearchOption struct {
 	IndexNameSeparator string
 	QueueSize          int
+	MaxQueueSize       int
 }
 
 type SyncMySQLToElasticSearch struct {
@@ -58,7 +69,7 @@ func (this *SyncMySQLToElasticSearch) SetOnPosSynced(onPostSynced func(name stri
 	this.onPosSynced = onPostSynced
 }
 
-func (this *SyncMySQLToElasticSearch) Syncer() {
+func (this *SyncMySQLToElasticSearch) syncer() {
 	for this.runSyncer {
 		intCount := 0
 		bulkRequest := this.esClient.Bulk()
@@ -74,7 +85,7 @@ func (this *SyncMySQLToElasticSearch) Syncer() {
 				data := infData.(ESQueueItem)
 
 				if data.Action == "insert" || data.Action == "update" {
-					bulkRequest.Add(elastic.NewBulkIndexRequest().Index(data.IndexName).Id(data.PrimaryKey).Doc(this.GetObjectValues(data.Data)))
+					bulkRequest.Add(elastic.NewBulkIndexRequest().Index(data.IndexName).Id(data.PrimaryKey).Doc(this.getObjectValues(data.Data)))
 				} else if data.Action == "delete" {
 					bulkRequest.Add(elastic.NewBulkDeleteRequest().Index(data.IndexName).Id(data.PrimaryKey))
 				}
@@ -124,6 +135,10 @@ func (this *SyncMySQLToElasticSearch) Init(addr, user, password, dbName, esAddr,
 		option.QueueSize = 10000
 	}
 
+	if option.MaxQueueSize == 0 {
+		option.MaxQueueSize = 10000 * 3
+	}
+
 	if option.IndexNameSeparator == "" {
 		option.IndexNameSeparator = "@"
 	}
@@ -153,12 +168,15 @@ func (this *SyncMySQLToElasticSearch) Init(addr, user, password, dbName, esAddr,
 	this.ctx = context.Background()
 
 	this.runSyncer = true
-	go this.Syncer()
+	go this.syncer()
 
 	return nil
 }
 
 func (this *SyncMySQLToElasticSearch) addToESQueue(action, indexName, primaryKey string, data interface{}) {
+	for this.esQueue.Size() > this.option.MaxQueueSize && this.option.MaxQueueSize != -1 {
+		time.Sleep(50 * time.Millisecond)
+	}
 	this.esQueue.Enqueue(ESQueueItem{
 		Action:     action,
 		IndexName:  indexName,
@@ -598,7 +616,7 @@ func (this *SyncMySQLToElasticSearch) OnPosSynced(pos mysql.Position, _ mysql.GT
 	return nil
 }
 
-func (this *SyncMySQLToElasticSearch) GetObjectValues(object interface{}) map[string]interface{} {
+func (this *SyncMySQLToElasticSearch) getObjectValues(object interface{}) map[string]interface{} {
 	result := make(map[string]interface{})
 	t := reflect.TypeOf(object)
 	v := reflect.ValueOf(object)
