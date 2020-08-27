@@ -11,6 +11,7 @@ import (
 	"github.com/siddontang/go-mysql/mysql"
 	"io"
 	"reflect"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"time"
@@ -109,6 +110,7 @@ func (this *SyncMySQLToElasticSearch) syncer() {
 				}
 			}
 			log.Infof("%d documents synced", len(resp.Succeeded()))
+			debug.FreeOSMemory()
 		} else {
 
 		}
@@ -409,205 +411,213 @@ func (this *SyncMySQLToElasticSearch) SyncFrom(binlogFile string, binlogPosition
 }
 
 func (this *SyncMySQLToElasticSearch) OnRow(rowsEvent *canal.RowsEvent) error {
-	intfc := this.tableNameStructMapping[rowsEvent.Table.Name]
-	sType := reflect.TypeOf(intfc)
-	indexName := this.getIndexName(rowsEvent.Table.Name)
-
-	var row []interface{}
+	step := 1
 	if rowsEvent.Action == "update" {
-		row = rowsEvent.Rows[1]
-	} else if rowsEvent.Action == "insert" {
-		row = rowsEvent.Rows[0]
-	} else if rowsEvent.Action == "delete" {
-		row = rowsEvent.Rows[0]
-	} else {
-		row = rowsEvent.Rows[0]
+		step = 2
 	}
 
-	sInstance := reflect.New(sType).Elem()
-	for _, column := range this.structMapping[rowsEvent.Table.Name] {
-		switch column.Type.String() {
-		case "string":
-			switch row[column.TableIndex].(type) {
-			case []uint8:
-				sInstance.Field(column.Index).SetString(string(row[column.TableIndex].([]uint8)))
-			case string:
-				sInstance.Field(column.Index).SetString(row[column.TableIndex].(string))
-			case nil:
-				sInstance.Field(column.Index).SetString("")
-			default:
-				typeof := reflect.TypeOf(row[column.TableIndex])
-				log.Debug(fmt.Sprint(row[column.TableIndex], typeof.String()))
-			}
-		case "uint":
-			switch row[column.TableIndex].(type) {
-			case uint:
-				val := reflect.ValueOf(row[column.TableIndex])
-				sInstance.Field(column.Index).SetUint(val.Uint())
-			case uint8:
-				val := reflect.ValueOf(row[column.TableIndex])
-				sInstance.Field(column.Index).SetUint(val.Uint())
-			case uint16:
-				val := reflect.ValueOf(row[column.TableIndex])
-				sInstance.Field(column.Index).SetUint(val.Uint())
-			case uint32:
-				val := reflect.ValueOf(row[column.TableIndex])
-				sInstance.Field(column.Index).SetUint(val.Uint())
-			case uint64:
-				val := reflect.ValueOf(row[column.TableIndex])
-				sInstance.Field(column.Index).SetUint(val.Uint())
-			case int:
-				val := reflect.ValueOf(row[column.TableIndex])
-				sInstance.Field(column.Index).SetUint(uint64(val.Int()))
-			case int8:
-				val := reflect.ValueOf(row[column.TableIndex])
-				sInstance.Field(column.Index).SetUint(uint64(val.Int()))
-			case int16:
-				val := reflect.ValueOf(row[column.TableIndex])
-				sInstance.Field(column.Index).SetUint(uint64(val.Int()))
-			case int32:
-				val := reflect.ValueOf(row[column.TableIndex])
-				sInstance.Field(column.Index).SetUint(uint64(val.Int()))
-			case int64:
-				val := reflect.ValueOf(row[column.TableIndex])
-				sInstance.Field(column.Index).SetUint(uint64(val.Int()))
-			default:
-				typeof := reflect.TypeOf(row[column.TableIndex])
-				log.Debug(fmt.Sprint(row[column.TableIndex], typeof.String()))
-			}
-		case "int64", "int":
-			switch row[column.TableIndex].(type) {
-			case uint:
-				val := reflect.ValueOf(row[column.TableIndex])
-				sInstance.Field(column.Index).SetInt(int64(val.Uint()))
-			case uint8:
-				val := reflect.ValueOf(row[column.TableIndex])
-				sInstance.Field(column.Index).SetInt(int64(val.Uint()))
-			case uint16:
-				val := reflect.ValueOf(row[column.TableIndex])
-				sInstance.Field(column.Index).SetInt(int64(val.Uint()))
-			case uint32:
-				val := reflect.ValueOf(row[column.TableIndex])
-				sInstance.Field(column.Index).SetInt(int64(val.Uint()))
-			case uint64:
-				val := reflect.ValueOf(row[column.TableIndex])
-				sInstance.Field(column.Index).SetInt(int64(val.Uint()))
-			case int:
-				val := reflect.ValueOf(row[column.TableIndex])
-				sInstance.Field(column.Index).SetInt(val.Int())
-			case int8:
-				val := reflect.ValueOf(row[column.TableIndex])
-				sInstance.Field(column.Index).SetInt(val.Int())
-			case int16:
-				val := reflect.ValueOf(row[column.TableIndex])
-				sInstance.Field(column.Index).SetInt(val.Int())
-			case int32:
-				val := reflect.ValueOf(row[column.TableIndex])
-				sInstance.Field(column.Index).SetInt(val.Int())
-			case int64:
-				val := reflect.ValueOf(row[column.TableIndex])
-				sInstance.Field(column.Index).SetInt(val.Int())
-			case string:
-				val := reflect.ValueOf(row[column.TableIndex])
-				intVal, err := strconv.ParseInt(val.String(), 10, 64)
-				if err != nil {
-					log.Debug(err)
-				}
-				sInstance.Field(column.Index).SetInt(intVal)
-			default:
-				typeof := reflect.TypeOf(row[column.TableIndex])
-				log.Debug(fmt.Sprint(row[column.TableIndex], typeof.String()))
-			}
-		case "float64", "float":
-			switch row[column.TableIndex].(type) {
-			case float32:
-				val := reflect.ValueOf(row[column.TableIndex])
-				sInstance.Field(column.Index).SetFloat(val.Float())
-			case float64:
-				val := reflect.ValueOf(row[column.TableIndex])
-				sInstance.Field(column.Index).SetFloat(val.Float())
-			default:
-				typeof := reflect.TypeOf(row[column.TableIndex])
-				log.Debug(fmt.Sprint(row[column.TableIndex], typeof.String()))
-			}
-		case "bool":
-			switch row[column.TableIndex].(type) {
-			case uint8:
-				val := reflect.ValueOf(row[column.TableIndex])
-				if val.Uint() != 0 {
-					sInstance.Field(column.Index).SetBool(true)
-				} else {
-					sInstance.Field(column.Index).SetBool(false)
-				}
-			case int8:
-				val := reflect.ValueOf(row[column.TableIndex])
-				if val.Int() != 0 {
-					sInstance.Field(column.Index).SetBool(true)
-				} else {
-					sInstance.Field(column.Index).SetBool(false)
-				}
-			case int64:
-				val := reflect.ValueOf(row[column.TableIndex])
-				if val.Int() != 0 {
-					sInstance.Field(column.Index).SetBool(true)
-				} else {
-					sInstance.Field(column.Index).SetBool(false)
-				}
-			default:
-				typeof := reflect.TypeOf(row[column.TableIndex])
-				log.Debug(fmt.Sprint(row[column.TableIndex], typeof.String()))
-			}
-		case "time.Time":
-			switch row[column.TableIndex].(type) {
-			case string:
-				layout := "2006-01-02 15:04:05"
-				t, errParseInLocation := time.ParseInLocation(layout, row[column.TableIndex].(string), time.Local)
-				if errParseInLocation == nil {
-					val := reflect.ValueOf(t)
-					sInstance.Field(column.Index).Set(val)
-				}
-			default:
-				typeof := reflect.TypeOf(row[column.TableIndex])
-				log.Debug(fmt.Sprint(row[column.TableIndex], typeof.String()))
-			}
-		case "*time.Time":
-			switch row[column.TableIndex].(type) {
-			case string:
-				layout := "2006-01-02 15:04:05"
-				t, errParseInLocation := time.ParseInLocation(layout, row[column.TableIndex].(string), time.Local)
-				if errParseInLocation == nil {
-					val := reflect.ValueOf(&t)
-					sInstance.Field(column.Index).Set(val)
-				}
-			case nil:
-				// val := reflect.ValueOf(nil)
-				// sInstance.Field(column.Index).Set(val)
-			default:
-				typeof := reflect.TypeOf(row[column.TableIndex])
-				log.Debug(fmt.Sprint(row[column.TableIndex], typeof.String()))
-			}
-		default:
-			log.Debug(column.Type.String())
+	for i := 0; i < len(rowsEvent.Rows); i = i + step {
+		intfc := this.tableNameStructMapping[rowsEvent.Table.Name]
+		sType := reflect.TypeOf(intfc)
+		indexName := this.getIndexName(rowsEvent.Table.Name)
+
+		var row []interface{}
+		if rowsEvent.Action == "update" {
+			row = rowsEvent.Rows[i+1]
+		} else if rowsEvent.Action == "insert" {
+			row = rowsEvent.Rows[i]
+		} else if rowsEvent.Action == "delete" {
+			row = rowsEvent.Rows[i]
+		} else {
+			row = rowsEvent.Rows[i]
 		}
-	}
 
-	itf := sInstance.Interface()
-	rv := reflect.ValueOf(itf)
-
-	primaryKey := ""
-	if _, hasPrimaryKey := this.structPrimaryKey[rowsEvent.Table.Name]; hasPrimaryKey {
-		primaryKey = fmt.Sprint(rv.Field(this.structPrimaryKey[rowsEvent.Table.Name].Index).Interface())
-	} else {
-		primaryKeys := make([]string, 0)
-		for i := 0; i < rv.NumField(); i++ {
-			if rv.Field(i).Type().Kind() == reflect.Uint {
-				primaryKeys = append(primaryKeys, fmt.Sprint(rv.Field(i).Interface()))
+		sInstance := reflect.New(sType).Elem()
+		for _, column := range this.structMapping[rowsEvent.Table.Name] {
+			switch column.Type.String() {
+			case "string":
+				switch row[column.TableIndex].(type) {
+				case []uint8:
+					sInstance.Field(column.Index).SetString(string(row[column.TableIndex].([]uint8)))
+				case string:
+					sInstance.Field(column.Index).SetString(row[column.TableIndex].(string))
+				case nil:
+					sInstance.Field(column.Index).SetString("")
+				default:
+					typeof := reflect.TypeOf(row[column.TableIndex])
+					log.Debug(fmt.Sprint(row[column.TableIndex], typeof.String()))
+				}
+			case "uint":
+				switch row[column.TableIndex].(type) {
+				case uint:
+					val := reflect.ValueOf(row[column.TableIndex])
+					sInstance.Field(column.Index).SetUint(val.Uint())
+				case uint8:
+					val := reflect.ValueOf(row[column.TableIndex])
+					sInstance.Field(column.Index).SetUint(val.Uint())
+				case uint16:
+					val := reflect.ValueOf(row[column.TableIndex])
+					sInstance.Field(column.Index).SetUint(val.Uint())
+				case uint32:
+					val := reflect.ValueOf(row[column.TableIndex])
+					sInstance.Field(column.Index).SetUint(val.Uint())
+				case uint64:
+					val := reflect.ValueOf(row[column.TableIndex])
+					sInstance.Field(column.Index).SetUint(val.Uint())
+				case int:
+					val := reflect.ValueOf(row[column.TableIndex])
+					sInstance.Field(column.Index).SetUint(uint64(val.Int()))
+				case int8:
+					val := reflect.ValueOf(row[column.TableIndex])
+					sInstance.Field(column.Index).SetUint(uint64(val.Int()))
+				case int16:
+					val := reflect.ValueOf(row[column.TableIndex])
+					sInstance.Field(column.Index).SetUint(uint64(val.Int()))
+				case int32:
+					val := reflect.ValueOf(row[column.TableIndex])
+					sInstance.Field(column.Index).SetUint(uint64(val.Int()))
+				case int64:
+					val := reflect.ValueOf(row[column.TableIndex])
+					sInstance.Field(column.Index).SetUint(uint64(val.Int()))
+				default:
+					typeof := reflect.TypeOf(row[column.TableIndex])
+					log.Debug(fmt.Sprint(row[column.TableIndex], typeof.String()))
+				}
+			case "int64", "int":
+				switch row[column.TableIndex].(type) {
+				case uint:
+					val := reflect.ValueOf(row[column.TableIndex])
+					sInstance.Field(column.Index).SetInt(int64(val.Uint()))
+				case uint8:
+					val := reflect.ValueOf(row[column.TableIndex])
+					sInstance.Field(column.Index).SetInt(int64(val.Uint()))
+				case uint16:
+					val := reflect.ValueOf(row[column.TableIndex])
+					sInstance.Field(column.Index).SetInt(int64(val.Uint()))
+				case uint32:
+					val := reflect.ValueOf(row[column.TableIndex])
+					sInstance.Field(column.Index).SetInt(int64(val.Uint()))
+				case uint64:
+					val := reflect.ValueOf(row[column.TableIndex])
+					sInstance.Field(column.Index).SetInt(int64(val.Uint()))
+				case int:
+					val := reflect.ValueOf(row[column.TableIndex])
+					sInstance.Field(column.Index).SetInt(val.Int())
+				case int8:
+					val := reflect.ValueOf(row[column.TableIndex])
+					sInstance.Field(column.Index).SetInt(val.Int())
+				case int16:
+					val := reflect.ValueOf(row[column.TableIndex])
+					sInstance.Field(column.Index).SetInt(val.Int())
+				case int32:
+					val := reflect.ValueOf(row[column.TableIndex])
+					sInstance.Field(column.Index).SetInt(val.Int())
+				case int64:
+					val := reflect.ValueOf(row[column.TableIndex])
+					sInstance.Field(column.Index).SetInt(val.Int())
+				case string:
+					val := reflect.ValueOf(row[column.TableIndex])
+					intVal, err := strconv.ParseInt(val.String(), 10, 64)
+					if err != nil {
+						log.Debug(err)
+					}
+					sInstance.Field(column.Index).SetInt(intVal)
+				default:
+					typeof := reflect.TypeOf(row[column.TableIndex])
+					log.Debug(fmt.Sprint(row[column.TableIndex], typeof.String()))
+				}
+			case "float64", "float":
+				switch row[column.TableIndex].(type) {
+				case float32:
+					val := reflect.ValueOf(row[column.TableIndex])
+					sInstance.Field(column.Index).SetFloat(val.Float())
+				case float64:
+					val := reflect.ValueOf(row[column.TableIndex])
+					sInstance.Field(column.Index).SetFloat(val.Float())
+				default:
+					typeof := reflect.TypeOf(row[column.TableIndex])
+					log.Debug(fmt.Sprint(row[column.TableIndex], typeof.String()))
+				}
+			case "bool":
+				switch row[column.TableIndex].(type) {
+				case uint8:
+					val := reflect.ValueOf(row[column.TableIndex])
+					if val.Uint() != 0 {
+						sInstance.Field(column.Index).SetBool(true)
+					} else {
+						sInstance.Field(column.Index).SetBool(false)
+					}
+				case int8:
+					val := reflect.ValueOf(row[column.TableIndex])
+					if val.Int() != 0 {
+						sInstance.Field(column.Index).SetBool(true)
+					} else {
+						sInstance.Field(column.Index).SetBool(false)
+					}
+				case int64:
+					val := reflect.ValueOf(row[column.TableIndex])
+					if val.Int() != 0 {
+						sInstance.Field(column.Index).SetBool(true)
+					} else {
+						sInstance.Field(column.Index).SetBool(false)
+					}
+				default:
+					typeof := reflect.TypeOf(row[column.TableIndex])
+					log.Debug(fmt.Sprint(row[column.TableIndex], typeof.String()))
+				}
+			case "time.Time":
+				switch row[column.TableIndex].(type) {
+				case string:
+					layout := "2006-01-02 15:04:05"
+					t, errParseInLocation := time.ParseInLocation(layout, row[column.TableIndex].(string), time.Local)
+					if errParseInLocation == nil {
+						val := reflect.ValueOf(t)
+						sInstance.Field(column.Index).Set(val)
+					}
+				default:
+					typeof := reflect.TypeOf(row[column.TableIndex])
+					log.Debug(fmt.Sprint(row[column.TableIndex], typeof.String()))
+				}
+			case "*time.Time":
+				switch row[column.TableIndex].(type) {
+				case string:
+					layout := "2006-01-02 15:04:05"
+					t, errParseInLocation := time.ParseInLocation(layout, row[column.TableIndex].(string), time.Local)
+					if errParseInLocation == nil {
+						val := reflect.ValueOf(&t)
+						sInstance.Field(column.Index).Set(val)
+					}
+				case nil:
+					// val := reflect.ValueOf(nil)
+					// sInstance.Field(column.Index).Set(val)
+				default:
+					typeof := reflect.TypeOf(row[column.TableIndex])
+					log.Debug(fmt.Sprint(row[column.TableIndex], typeof.String()))
+				}
+			default:
+				log.Debug(column.Type.String())
 			}
 		}
-		primaryKey = strings.Join(primaryKeys, ",")
+
+		itf := sInstance.Interface()
+		rv := reflect.ValueOf(itf)
+
+		primaryKey := ""
+		if _, hasPrimaryKey := this.structPrimaryKey[rowsEvent.Table.Name]; hasPrimaryKey {
+			primaryKey = fmt.Sprint(rv.Field(this.structPrimaryKey[rowsEvent.Table.Name].Index).Interface())
+		} else {
+			primaryKeys := make([]string, 0)
+			for i := 0; i < rv.NumField(); i++ {
+				if rv.Field(i).Type().Kind() == reflect.Uint {
+					primaryKeys = append(primaryKeys, fmt.Sprint(rv.Field(i).Interface()))
+				}
+			}
+			primaryKey = strings.Join(primaryKeys, ",")
+		}
+
+		this.addToESQueue(rowsEvent.Action, indexName, primaryKey, itf)
 	}
 
-	this.addToESQueue(rowsEvent.Action, indexName, primaryKey, itf)
 	return nil
 }
 
