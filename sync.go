@@ -22,6 +22,7 @@ func SetLogger(w io.Writer) {
 		panic(err)
 	}
 	l := log.NewDefault(sh)
+	l.SetLevel(log.LevelInfo)
 	log.SetDefaultLogger(l)
 }
 
@@ -435,7 +436,7 @@ func (this *SyncMySQLToElasticSearch) OnRow(rowsEvent *canal.RowsEvent) error {
 				sInstance.Field(column.Index).SetString("")
 			default:
 				typeof := reflect.TypeOf(row[column.TableIndex])
-				log.Error(fmt.Sprint(row[column.TableIndex], typeof.String()))
+				log.Debug(fmt.Sprint(row[column.TableIndex], typeof.String()))
 			}
 		case "uint":
 			switch row[column.TableIndex].(type) {
@@ -471,7 +472,7 @@ func (this *SyncMySQLToElasticSearch) OnRow(rowsEvent *canal.RowsEvent) error {
 				sInstance.Field(column.Index).SetUint(uint64(val.Int()))
 			default:
 				typeof := reflect.TypeOf(row[column.TableIndex])
-				log.Error(fmt.Sprint(row[column.TableIndex], typeof.String()))
+				log.Debug(fmt.Sprint(row[column.TableIndex], typeof.String()))
 			}
 		case "int64", "int":
 			switch row[column.TableIndex].(type) {
@@ -509,12 +510,12 @@ func (this *SyncMySQLToElasticSearch) OnRow(rowsEvent *canal.RowsEvent) error {
 				val := reflect.ValueOf(row[column.TableIndex])
 				intVal, err := strconv.ParseInt(val.String(), 10, 64)
 				if err != nil {
-					log.Error(err)
+					log.Debug(err)
 				}
 				sInstance.Field(column.Index).SetInt(intVal)
 			default:
 				typeof := reflect.TypeOf(row[column.TableIndex])
-				log.Error(fmt.Sprint(row[column.TableIndex], typeof.String()))
+				log.Debug(fmt.Sprint(row[column.TableIndex], typeof.String()))
 			}
 		case "float64", "float":
 			switch row[column.TableIndex].(type) {
@@ -526,7 +527,7 @@ func (this *SyncMySQLToElasticSearch) OnRow(rowsEvent *canal.RowsEvent) error {
 				sInstance.Field(column.Index).SetFloat(val.Float())
 			default:
 				typeof := reflect.TypeOf(row[column.TableIndex])
-				log.Error(fmt.Sprint(row[column.TableIndex], typeof.String()))
+				log.Debug(fmt.Sprint(row[column.TableIndex], typeof.String()))
 			}
 		case "bool":
 			switch row[column.TableIndex].(type) {
@@ -553,7 +554,7 @@ func (this *SyncMySQLToElasticSearch) OnRow(rowsEvent *canal.RowsEvent) error {
 				}
 			default:
 				typeof := reflect.TypeOf(row[column.TableIndex])
-				log.Error(fmt.Sprint(row[column.TableIndex], typeof.String()))
+				log.Debug(fmt.Sprint(row[column.TableIndex], typeof.String()))
 			}
 		case "time.Time":
 			switch row[column.TableIndex].(type) {
@@ -566,7 +567,7 @@ func (this *SyncMySQLToElasticSearch) OnRow(rowsEvent *canal.RowsEvent) error {
 				}
 			default:
 				typeof := reflect.TypeOf(row[column.TableIndex])
-				log.Error(fmt.Sprint(row[column.TableIndex], typeof.String()))
+				log.Debug(fmt.Sprint(row[column.TableIndex], typeof.String()))
 			}
 		case "*time.Time":
 			switch row[column.TableIndex].(type) {
@@ -582,10 +583,10 @@ func (this *SyncMySQLToElasticSearch) OnRow(rowsEvent *canal.RowsEvent) error {
 				// sInstance.Field(column.Index).Set(val)
 			default:
 				typeof := reflect.TypeOf(row[column.TableIndex])
-				log.Error(fmt.Sprint(row[column.TableIndex], typeof.String()))
+				log.Debug(fmt.Sprint(row[column.TableIndex], typeof.String()))
 			}
 		default:
-			log.Error(column.Type.String())
+			log.Debug(column.Type.String())
 		}
 	}
 
