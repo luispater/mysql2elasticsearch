@@ -364,6 +364,7 @@ func (this *SyncMySQLToElasticSearch) Sync() error {
 	}
 
 	canalCfg.IncludeTableRegex = includeTableRegex
+	canalCfg.ExcludeTableRegex = []string{"^mysql\\.ha_health_check$"}
 
 	c, err := canal.NewCanal(canalCfg)
 	if err != nil {
