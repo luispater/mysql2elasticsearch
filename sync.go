@@ -607,9 +607,9 @@ func (this *SyncMySQLToElasticSearch) OnRow(rowsEvent *canal.RowsEvent) error {
 			primaryKey = fmt.Sprint(rv.Field(this.structPrimaryKey[rowsEvent.Table.Name].Index).Interface())
 		} else {
 			primaryKeys := make([]string, 0)
-			for i := 0; i < rv.NumField(); i++ {
-				if rv.Field(i).Type().Kind() == reflect.Uint {
-					primaryKeys = append(primaryKeys, fmt.Sprint(rv.Field(i).Interface()))
+			for index := 0; index < rv.NumField(); index++ {
+				if rv.Field(index).Type().Kind() == reflect.Uint {
+					primaryKeys = append(primaryKeys, fmt.Sprint(rv.Field(index).Interface()))
 				}
 			}
 			primaryKey = strings.Join(primaryKeys, ",")
