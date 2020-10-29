@@ -2,6 +2,7 @@ package mysql2elasticsearch
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"github.com/olivere/elastic/v7"
@@ -10,6 +11,7 @@ import (
 	mycli "github.com/siddontang/go-mysql/client"
 	"github.com/siddontang/go-mysql/mysql"
 	"io"
+	"net/http"
 	"reflect"
 	"runtime/debug"
 	"strconv"
@@ -157,8 +159,14 @@ func (this *SyncMySQLToElasticSearch) Init(addr, user, password, dbName, esAddr,
 		return err
 	}
 
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	client := &http.Client{Transport: tr}
+
 	servers := []string{esAddr}
 	this.esClient, err = elastic.NewClient(
+		elastic.SetHttpClient(client),
 		elastic.SetURL(servers...),
 		elastic.SetSniff(false),
 		elastic.SetHealthcheck(false),
