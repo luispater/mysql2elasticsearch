@@ -358,7 +358,7 @@ func (this *SyncMySQLToElasticSearch) getESIndexMapping(tableStruct interface{})
 	if err != nil {
 		return "", err
 	}
-	return fmt.Sprintf(`{"settings":{"index.max_result_window":"100000000"},"mappings":{"properties":%s}}`, string(byteMapping)), nil
+	return fmt.Sprintf(`{"settings":{"index.max_result_window":"100000000","index.search.idle.after":"1440m"},"mappings":{"properties":%s}}`, string(byteMapping)), nil
 }
 
 func (this *SyncMySQLToElasticSearch) Sync() error {
